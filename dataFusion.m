@@ -1,64 +1,67 @@
 clear all; clc; close all;
 
-Iterations = 1000;
-Ts = 10^-2;
+Iterations = 10000;
 
-gpsDeviation = 0.05;
+Ts = 10^-2;
+t = 0:Iterations-1;
+t = t*Ts;
+
+gpsDeviation = 0.5;
 imuDeviation = 0.5;
 
 radius = 15;
 l = 45;
 teta = pi/2;
-phi = 2*pi;
+vel_max = 10*pi;
+phi = 0:(vel_max/Iterations):vel_max;
 
 R = rotationMatrix(teta);
 A = [.5 .5 0; 0 0 1; 1/(2*l) -1/(2*l) 0];
-U = [radius*phi radius*phi 0]';
-
-PosI_0 = [0 0 0]'; % X, Y, teta
-PosR_0 = [0 0 0]';
-VelI_0 = [0 0 0]'; % Vx, Vy, omega
-VelR_0 = [0 0 0]';
 
 
+PosI = zeros(3, Iterations); % X, Y, teta
+PosR = zeros(3, Iterations);
+VelI = zeros(3, Iterations); % Vx, Vy, omega
+VelR = zeros(3, Iterations);
 
-TetaIMU_0 = teta; % Não é verdade que o teta da IMU é teta mas é o inicial do sistema (Acredito que faz sentido)
-VelIMU_0 = [0 0]';
-PosIMU_0 = [0 0]';
+ZGps = zeros(3, Iterations);
+ZIns = zeros(4, Iterations);
+
+IMU = zeros(3, Iterations);
+IMUI = zeros(3, Iterations);
+TetaIMU = zeros(1, Iterations);  % Não é verdade que o teta da IMU é teta mas é o inicial do sistema (Acredito que faz sentido)
+TetaIMU(1,1) = teta;
+VelIMU = zeros(2, Iterations);
+PosIMU = zeros(2, Iterations);
 
 for i=2:Iterations
   %%Modelo do robo
-  VelR_1 = A*U;
-  VelI_1 = inv(R)*VelR_1;
+  U = [radius*phi(i-1) radius*phi(i-1) 0]';
+  VelR(:, i) = A*U;
+  VelI(:, i) = inv(R)*VelR(:,i);
 
-  AcelR = (VelR_1 - VelR_0)/Ts;
-  AcelI = (VelI_1 - VelI_0)/Ts;
+  AcelR = (VelR(:,i) - VelR(:,i-1))/Ts;
+  AcelI = (VelI(:,i) - VelI(:,i-1))/Ts;
 
-  PosR_1 = PosI_0 + VelR_0*Ts;
-  PosI_1 = PosI_0 + VelI_0*Ts;
+  PosR(:,i) = PosR(:, i-1) + VelR(:, i-1)*Ts;
+  PosI(:,i) = PosI(:, i-1) + VelI(:, i-1)*Ts;
 
   %GPS
-  ZGps = [PosI_0(1) PosI_0(2) sqrt(VelI_0(1)^2 + VelI_0(2)^2)]' + normrnd(0, gpsDeviation);
+  ZGps(:,i) = [PosI(1, i-1) PosI(2, i-1) sqrt(VelI(1, i-1)^2 + VelI(2, i-1)^2)]' + normrnd(0, gpsDeviation);
 
   %INS
-  IMU = [AcelR(1) AcelR(2) VelR_0(3)]' + normrnd(0, imuDeviation);
-  TetaIMU_1 = TetaIMU_0 + IMU(3)*Ts;
-  RIMU = rotationMatrix(TetaIMU_0);
-  IMUI = inv(RIMU)*IMU;
+  IMU(:,i-1) = [AcelR(1) AcelR(2) VelR(3, i-1)]' + normrnd(0, imuDeviation);
+  TetaIMU(1, i) = TetaIMU(1, i-1) + IMU(3,i-1)*Ts;
+  RIMU = rotationMatrix(TetaIMU(1, i-1));
+  IMUI(:,i-1) = inv(RIMU)*IMU(:,i-1);
 
-  VelIMU_1 = VelIMU_0 + IMUI(1:2)*Ts;
-  PosIMU_1 = PosIMU_0 + VelIMU_0*Ts;
+  VelIMU(:, i) = VelIMU(:, i-1) + IMUI(1:2, i-1)*Ts;
+  PosIMU(:, i) = PosIMU(:, i-1) + VelIMU(:, i-1)*Ts;
 
-  ZIns = [PosIMU_0(1) PosIMU_0(2) VelIMU_0(1) VelIMU_0(2)]';
+  ZIns(:,i) = [PosIMU(1, i-1) PosIMU(2, i-1) VelIMU(1, i-1) VelIMU(2, i-1)]';
 
-  %Update Variables
-  PosI_0 = PosI_1;
-  PosR_0 = PosR_1;
-
-  VelI_0 = VelI_1;
-  VelR_0 = VelR_1;
-
-  TetaIMU_0 = TetaIMU_1;
-  VelIMU_0 = VelIMU_1;
-  PosIMU_0 = PosIMU_1;
 endfor
+
+plot(t, ZIns(2,:), 'k');
+hold
+plot(t, ZGps(2,:), 'b');
