@@ -77,10 +77,7 @@ for i=2:Iterations
   ZIns(:,i) = [PosIMU(1, i) PosIMU(2, i) VelIMU(1, i) VelIMU(2, i)]';
 
   %EFK
-  if((time_passed - last_gps)<(Ts*100))
-    Xe(:,i) = Xe(:, i-1);
-    Ptrace(i) = trace(Pk);
-  else
+  if((time_passed - last_gps)>(Ts*100))
     last_gps = time_passed;
     F = [0 0 0 1 0; 0 0 0 0 1; 0 0 0 0 0; 0 0 -IMUI(2, i) 0 0; 0 0 IMUI(1, i) 0 0]; %Conferir sinais e ver se usa i ou i-1
     G = [0 0 0; 0 0 0; 1 0 0; 0 cos(TetaIMU(1,i)) -sin(TetaIMU(1,i)); 0 sin(TetaIMU(1,i)) cos(TetaIMU(1,i))];
@@ -107,9 +104,10 @@ for i=2:Iterations
     Xe(:,i) = K*dZ;
     Pk = (eye(5) - K * H) * Pk;
     Ptrace(i) = trace(Pk);
-       
-%     Z(:,i) = [(ZIns(1,i) + Xe(1,i)), (ZIns(2,i)+Xe(2,i))]';
-%     ZIns(1:2,i) + Xe(1:2,i);
+  else
+    Xe(:,i) = Xe(:, i-1); % 0?
+    Ptrace(i) = trace(Pk);
+
   end
   Z(1,i) = ZIns(1,i) + Xe(1,i);
   Z(2,i) = ZIns(2,i) + Xe(2,i);
