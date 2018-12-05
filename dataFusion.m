@@ -6,9 +6,6 @@ Ts = 10^-2;
 t = 0:Iterations-1;
 t = t*Ts;
 
-gpsDeviation = 0.2;
-imuDeviation = 1;
-
 radius = 15;
 l = 45;
 teta = pi/2;
@@ -36,10 +33,13 @@ PosIMU = zeros(2, Iterations);
 time_passed = 0;
 last_gps = 0;
 
-Q = eye(3)*0.3;
-R = eye(3)*0.8;
+gpsDeviation = 0.001;
+imuDeviation = 0.001;
 
-Pk = ones(5,5); %Covariance
+Q = eye(3)*gpsDeviation*10;
+R = eye(3)*imuDeviation*.2;
+
+Pk = zeros(5,5); %Covariance
 Xe = zeros(5, Iterations);
 Ptrace = zeros(1,Iterations);
 
@@ -77,19 +77,19 @@ for i=2:Iterations
   ZIns(:,i) = [PosIMU(1, i) PosIMU(2, i) VelIMU(1, i) VelIMU(2, i)]';
 
   %EFK
-  if((time_passed - last_gps)>(Ts*100))
+  if((time_passed - last_gps)<(Ts*100))
     Xe(:,i) = Xe(:, i-1);
     Ptrace(i) = trace(Pk);
-    last_gps = time_passed;
   else
-    F = [0 0 0 1 0; 0 0 0 0 1; 0 0 0 0 0; 0 0 -IMUI(2, i-1) 0 0; 0 0 IMUI(1, i-1) 0 0]; %Conferir sinais e ver se usa i ou i-1
-    G = [0 0 0; 0 0 0; 1 0 0; 0 cos(TetaIMU(1,i-1)) -sin(TetaIMU(1,i-1)); 0 sin(TetaIMU(1,i-1)) cos(TetaIMU(1,i-1))];
+    last_gps = time_passed;
+    F = [0 0 0 1 0; 0 0 0 0 1; 0 0 0 0 0; 0 0 -IMUI(2, i) 0 0; 0 0 IMUI(1, i) 0 0]; %Conferir sinais e ver se usa i ou i-1
+    G = [0 0 0; 0 0 0; 1 0 0; 0 cos(TetaIMU(1,i)) -sin(TetaIMU(1,i)); 0 sin(TetaIMU(1,i)) cos(TetaIMU(1,i))];
 
-    v_sqrt = sqrt(ZIns(3,i-1)^2 + ZIns(4,i-1)^2); %ZIns?
+    v_sqrt = sqrt(ZIns(3,i)^2 + ZIns(4,1)^2); %ZIns?
     if(v_sqrt==0)
         H = [1 0 0 0 0; 0 1 0 0 0; 0 0 0 0 0];
     else
-        H = [1 0 0 0 0; 0 1 0 0 0; 0 0 0 ZIns(3,i-1)/v_sqrt ZIns(4,i-1)/v_sqrt];
+        H = [1 0 0 0 0; 0 1 0 0 0; 0 0 0 ZIns(3,i)/v_sqrt ZIns(4,i)/v_sqrt];
     end
     
     D = zeros(3,3);
@@ -115,6 +115,33 @@ for i=2:Iterations
   Z(2,i) = ZIns(2,i) + Xe(2,i);
 end
 
-figure(1)
+% figure(1)
+subplot(2,2,1);
+plot(t, ZIns(1,:), 'r', t, ZGps(1,:), 'b',t, Z(1,:), 'k', t, PosI(1,:),'y');
+legend('Ins','GPS','EKF','Real');
+xlabel('Time [s]');
+ylabel('X');
+title('X vs Time');
+
+% figure(2)
+subplot(2,2,2);
 plot(t, ZIns(2,:), 'r', t, ZGps(2,:), 'b',t, Z(2,:), 'k', t, PosI(2,:),'y');
-% plot(t, ZGps(2,:));
+legend('Ins','GPS','EKF','Real');
+xlabel('Time [s]');
+ylabel('Y');
+title('Y vs Time');
+
+% figure(3)
+subplot(2,2,3);
+plot(ZIns(1,:), ZIns(2,:),'r', ZGps(1,:), ZGps(2,:),'b', Z(1,:), Z(2,:),'k', PosI(1,:), PosI(2,:),'y');
+legend('Ins','GPS','EKF','Real')';
+xlabel('X');
+ylabel('Y');
+title('Y vs X');
+
+% figure(4)
+subplot(2,2,4);
+plot(t,Ptrace);
+xlabel('t');
+ylabel('Trace P');
+title('P vs Time');
