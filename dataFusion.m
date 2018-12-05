@@ -115,9 +115,9 @@ for i=2:Iterations
   Z(2,i) = ZIns(2,i) + Xe(2,i);
 end
 
-% figure(1)
+figure(1)
 subplot(2,2,1);
-plot(t, ZIns(1,:), 'r', t, ZGps(1,:), 'b',t, Z(1,:), 'k', t, PosI(1,:),'y');
+plot(t, ZIns(1,:), ':k', t, ZGps(1,:), 'b',t, Z(1,:), 'r', t, PosI(1,:),'--b');
 legend('Ins','GPS','EKF','Real');
 xlabel('Time [s]');
 ylabel('X');
@@ -125,7 +125,7 @@ title('X vs Time');
 
 % figure(2)
 subplot(2,2,2);
-plot(t, ZIns(2,:), 'r', t, ZGps(2,:), 'b',t, Z(2,:), 'k', t, PosI(2,:),'y');
+plot(t, ZIns(2,:), ':k', t, ZGps(2,:), 'b',t, Z(2,:), 'r', t, PosI(2,:),'--b');
 legend('Ins','GPS','EKF','Real');
 xlabel('Time [s]');
 ylabel('Y');
@@ -133,7 +133,7 @@ title('Y vs Time');
 
 % figure(3)
 subplot(2,2,3);
-plot(ZIns(1,:), ZIns(2,:),'r', ZGps(1,:), ZGps(2,:),'b', Z(1,:), Z(2,:),'k', PosI(1,:), PosI(2,:),'y');
+plot(ZIns(1,:), ZIns(2,:),':k', ZGps(1,:), ZGps(2,:),'b', Z(1,:), Z(2,:),'r', PosI(1,:), PosI(2,:),'--b');
 legend('Ins','GPS','EKF','Real')';
 xlabel('X');
 ylabel('Y');
@@ -145,3 +145,30 @@ plot(t,Ptrace);
 xlabel('t');
 ylabel('Trace P');
 title('P vs Time');
+
+for i=1:20:Iterations
+    figure(2);
+    %plot da trajetória feita pelo robô
+    plot(PosI(1,1:i),PosI(2,1:i),'b--','lineWidth',1)
+
+    hold on
+    %plot da posição atual do veículo
+    plot(PosI(1,i),PosI(2,i),'bo','lineWidth',3)
+    %plot da posição atual do veículo
+    plot(ZGps(1, 1:i),ZGps(2, 1:i),'ko','MarkerSize',10)
+    %plot da trajetória do EKF
+    plot(Z(1,1:i),Z(2,1:i),'--r','lineWidth',3)
+    %plot da trajetória do dead reckoning
+    plot(ZIns(1,1:i),ZIns(2,1:i),':k','lineWidth',3)
+    
+    hold off
+    xlim([PosI(1,i)-5 PosI(1,i)+5])
+    ylim([PosI(2,i)-5 PosI(2,i)+5])
+    xlabel('x(m)','FontSize',14) 
+    ylabel('y(m)','FontSize',14)
+    set(gca, 'FontSize',18)
+    drawnow
+    pause(.0000000001)
+
+    
+end
