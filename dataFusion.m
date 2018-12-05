@@ -7,12 +7,12 @@ t = 0:Iterations-1;
 t = t*Ts;
 
 gpsDeviation = 0.5;
-imuDeviation = 0.5;
+imuDeviation = 0.9;
 
 radius = 15;
 l = 45;
 teta = pi/2;
-vel_max = 10*pi;
+vel_max = 20*pi;
 phi = 0:(vel_max/Iterations):vel_max;
 
 R = rotationMatrix(teta);
@@ -33,6 +33,8 @@ TetaIMU = zeros(1, Iterations);  % Não é verdade que o teta da IMU é teta mas
 TetaIMU(1,1) = teta;
 VelIMU = zeros(2, Iterations);
 PosIMU = zeros(2, Iterations);
+time_passed = 0;
+last_gps = 0;
 
 for i=2:Iterations
   %%Modelo do robo
@@ -46,8 +48,13 @@ for i=2:Iterations
   PosR(:,i) = PosR(:, i-1) + VelR(:, i-1)*Ts;
   PosI(:,i) = PosI(:, i-1) + VelI(:, i-1)*Ts;
 
-  %GPS
-  ZGps(:,i) = [PosI(1, i-1) PosI(2, i-1) sqrt(VelI(1, i-1)^2 + VelI(2, i-1)^2)]' + normrnd(0, gpsDeviation);
+  time_passed = time_passed + Ts;
+  if((time_passed - last_gps)>(Ts*100))
+      ZGps(:,i) = [PosI(1, i-1) PosI(2, i-1) sqrt(VelI(1, i-1)^2 + VelI(2, i-1)^2)]' + normrnd(0, gpsDeviation);
+      last_gps = time_passed;
+  else
+      ZGps(:,i) = ZGps(:,i-1);
+  endif
 
   %INS
   IMU(:,i-1) = [AcelR(1) AcelR(2) VelR(3, i-1)]' + normrnd(0, imuDeviation);
